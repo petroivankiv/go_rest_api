@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -108,5 +111,21 @@ func main() {
 	r.HandleFunc("/api/books/{id}", updateBook).Methods("PUT")
 	r.HandleFunc("/api/books/{id}", deleteBook).Methods("DELETE")
 
-	log.Fatal(http.ListenAndServe(":8000", r))
+	c := make(chan os.Signal, 1)
+	// We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
+	// SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+	signal.Notify(c, os.Interrupt)
+
+	// Run our server in a goroutine so that it doesn't block.
+	go func() {
+		fmt.Println("Listening on port", 8000)
+		sig := <-c
+		fmt.Printf("caught sig: %+v ", sig)
+		fmt.Println("\nWait for 2 second to finish processing")
+		time.Sleep(2 * time.Second)
+		os.Exit(0)
+	}()
+
+	http.ListenAndServe(":8080", r)
+
 }
